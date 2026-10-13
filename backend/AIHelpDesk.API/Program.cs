@@ -81,7 +81,7 @@ using (var scope = app.Services.CreateScope())
     await IdentitySeeder.SeedAdminAsync(
         userManager,
         app.Configuration);
-
+}
 
 
 // Configure the HTTP request pipeline.
