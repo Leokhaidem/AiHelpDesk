@@ -130,13 +130,13 @@ public class AuthController : ControllerBase
                 });
             }
 
-            var roleResult = await _userManager.AddToRoleAsync(user, "Employee");
+            var roleResult = await _userManager.AddToRoleAsync(user, request.Role);
 
             if (!roleResult.Succeeded)
             {
                 await _userManager.DeleteAsync(user);
 
-                return StatusCode(500, "Unable to assign the Employee role.");
+                return StatusCode(500, "Unable to assign the requested role.");
             }
 
             var roles = await _userManager.GetRolesAsync(user);

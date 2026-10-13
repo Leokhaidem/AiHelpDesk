@@ -85,12 +85,8 @@ using (var scope = app.Services.CreateScope())
     await IdentitySeeder.SeedAdminAsync(
         userManager,
         app.Configuration);
-        
-    await AgentSeeder.SeedAgentAsync(
-        userManager,
-        app.Configuration);
-    
 }
+
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
