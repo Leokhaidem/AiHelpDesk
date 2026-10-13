@@ -64,6 +64,10 @@ builder.Services.AddScoped<
     AIHelpDesk.Application.Agent.Services.IAgentService,
     AIHelpDesk.Infrastructure.Services.AgentService>();
 
+ builder.Services.AddScoped<
+    AIHelpDesk.Application.Employee.Services.IEmployeeService,
+    AIHelpDesk.Infrastructure.Services.EmployeeService>();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -85,6 +89,7 @@ using (var scope = app.Services.CreateScope())
     await AgentSeeder.SeedAgentAsync(
         userManager,
         app.Configuration);
+    
 }
 
 // Configure the HTTP request pipeline.
