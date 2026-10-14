@@ -28,7 +28,7 @@ endpoint - Local development secrets using ASP.NET Core User Secrets
 ### Planned / Project Technologies
 
 -   React
--   MongoDB
+-   MongoDB/Mircosoft SQL server
 -   Gemini API
 -   Docker
 -   Azure

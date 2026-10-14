@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AIHelpDesk.Application\AIHelpDesk.Application.csproj" />
+    <ProjectReference Include="..\AIHelpDesk.Domain\AIHelpDesk.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
