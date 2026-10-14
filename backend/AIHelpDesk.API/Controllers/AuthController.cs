@@ -29,7 +29,7 @@ public class AuthController : ControllerBase
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
 
-        if (user is null)
+        if (user is null || !user.IsActive)
         {
             return Unauthorized("Invalid email or password.");
         }
