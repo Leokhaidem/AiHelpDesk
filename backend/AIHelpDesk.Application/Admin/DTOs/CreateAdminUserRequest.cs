@@ -21,4 +21,10 @@ public class CreateAdminUserRequest
     [RegularExpression("^(Employee|Agent)$",
         ErrorMessage = "Role must be Employee or Agent.")]
     public string Role { get; set; } = "Employee";
+
+    /// <summary>
+    /// Required when Role is Agent: the categories the new agent will work on
+    /// (AgentProfile + AgentCategory rows are created at the same time).
+    /// </summary>
+    public List<int>? CategoryIds { get; set; }
 }

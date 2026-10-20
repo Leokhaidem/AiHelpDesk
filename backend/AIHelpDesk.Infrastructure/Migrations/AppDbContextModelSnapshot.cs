@@ -22,6 +22,152 @@ namespace AIHelpDesk.Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.AgentApplication", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewedByAdminId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasFilter("[Status] = 0");
+
+                    b.ToTable("AgentApplications");
+                });
+
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.AgentApplicationCategory", b =>
+                {
+                    b.Property<int>("ApplicationId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ApplicationId", "CategoryId");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("AgentApplicationCategories");
+                });
+
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.AgentCategory", b =>
+                {
+                    b.Property<string>("AgentId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("AgentId", "CategoryId");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("AgentCategories");
+                });
+
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.AgentProfile", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MaxOpenTickets")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("AgentProfiles");
+                });
+
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.Attachment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("nvarchar(260)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("TicketId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UploaderId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TicketId");
+
+                    b.HasIndex("UploaderId");
+
+                    b.ToTable("Attachments");
+                });
+
             modelBuilder.Entity("AIHelpDesk.Domain.Entities.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -34,18 +180,59 @@ namespace AIHelpDesk.Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
                     b.ToTable("Categories");
+                });
+
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.Comment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AuthorId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TicketId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("TicketId");
+
+                    b.ToTable("Comments");
                 });
 
             modelBuilder.Entity("AIHelpDesk.Domain.Entities.Priority", b =>
@@ -67,9 +254,19 @@ namespace AIHelpDesk.Infrastructure.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Level")
+                        .IsUnique();
+
+                    b.HasIndex("Name")
+                        .IsUnique();
 
                     b.ToTable("Priorities");
                 });
@@ -82,13 +279,20 @@ namespace AIHelpDesk.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AiSuggestedResolution")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("AiSummary")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<string>("AssignedAgentId")
+                        .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<int?>("CategoryId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("ClosedAt")
                         .HasColumnType("datetime2");
@@ -102,31 +306,21 @@ namespace AIHelpDesk.Infrastructure.Migrations
 
                     b.Property<string>("EmployeeId")
                         .IsRequired()
+                        .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("Priority")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
+                    b.Property<int?>("PriorityId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Resolution")
+                        .HasMaxLength(5000)
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("ResolvedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<string>("SuggestedResolution")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Summary")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -140,7 +334,11 @@ namespace AIHelpDesk.Infrastructure.Migrations
 
                     b.HasIndex("AssignedAgentId");
 
+                    b.HasIndex("CategoryId");
+
                     b.HasIndex("EmployeeId");
+
+                    b.HasIndex("PriorityId");
 
                     b.ToTable("Tickets");
                 });
@@ -350,6 +548,94 @@ namespace AIHelpDesk.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.AgentApplication", b =>
+                {
+                    b.HasOne("AIHelpDesk.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.AgentApplicationCategory", b =>
+                {
+                    b.HasOne("AIHelpDesk.Domain.Entities.AgentApplication", "Application")
+                        .WithMany("Categories")
+                        .HasForeignKey("ApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AIHelpDesk.Domain.Entities.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Application");
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.AgentCategory", b =>
+                {
+                    b.HasOne("AIHelpDesk.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("AgentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AIHelpDesk.Domain.Entities.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.AgentProfile", b =>
+                {
+                    b.HasOne("AIHelpDesk.Infrastructure.Identity.ApplicationUser", null)
+                        .WithOne()
+                        .HasForeignKey("AIHelpDesk.Domain.Entities.AgentProfile", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.Attachment", b =>
+                {
+                    b.HasOne("AIHelpDesk.Domain.Entities.Ticket", "Ticket")
+                        .WithMany("Attachments")
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AIHelpDesk.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UploaderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Ticket");
+                });
+
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.Comment", b =>
+                {
+                    b.HasOne("AIHelpDesk.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AIHelpDesk.Domain.Entities.Ticket", "Ticket")
+                        .WithMany("Comments")
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Ticket");
+                });
+
             modelBuilder.Entity("AIHelpDesk.Domain.Entities.Ticket", b =>
                 {
                     b.HasOne("AIHelpDesk.Infrastructure.Identity.ApplicationUser", null)
@@ -357,11 +643,25 @@ namespace AIHelpDesk.Infrastructure.Migrations
                         .HasForeignKey("AssignedAgentId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("AIHelpDesk.Domain.Entities.Category", "Category")
+                        .WithMany("Tickets")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("AIHelpDesk.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("EmployeeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("AIHelpDesk.Domain.Entities.Priority", "Priority")
+                        .WithMany("Tickets")
+                        .HasForeignKey("PriorityId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Priority");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -413,6 +713,28 @@ namespace AIHelpDesk.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.AgentApplication", b =>
+                {
+                    b.Navigation("Categories");
+                });
+
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.Category", b =>
+                {
+                    b.Navigation("Tickets");
+                });
+
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.Priority", b =>
+                {
+                    b.Navigation("Tickets");
+                });
+
+            modelBuilder.Entity("AIHelpDesk.Domain.Entities.Ticket", b =>
+                {
+                    b.Navigation("Attachments");
+
+                    b.Navigation("Comments");
                 });
 #pragma warning restore 612, 618
         }

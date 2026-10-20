@@ -1,4 +1,6 @@
 
+using AIHelpDesk.Application.AgentApplications.DTOs;
+
 namespace AIHelpDesk.Application.Admin.DTOs;
 
 public class AdminUserResponse
@@ -12,4 +14,10 @@ public class AdminUserResponse
     public bool IsActive { get; set; }
 
     public IList<string> Roles { get; set; } = new List<string>();
+
+    /// <summary>Set for users in the Agent role.</summary>
+    public IList<CategoryRefResponse>? Categories { get; set; }
+
+    /// <summary>Assigned + InProgress ticket count. Set for users in the Agent role.</summary>
+    public int? OpenTicketCount { get; set; }
 }

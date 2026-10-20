@@ -1,160 +1,87 @@
-
-using AIHelpDesk.Application.Admin.DTOs;
-using AIHelpDesk.Domain.Entities;
-using AIHelpDesk.Infrastructure.Persistence;
+using System.Security.Claims;
+using AIHelpDesk.Application.Categories.DTOs;
+using AIHelpDesk.Application.Categories.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace AIHelpDesk.API.Controllers;
 
+/// <summary>
+/// Category management — Admin only for writes; GET is open to all authenticated users
+/// (needed by employees to see categories when creating tickets).
+/// Cache is invalidated automatically on every write via CategoryService.
+/// </summary>
 [ApiController]
-[Route("api/admin/categories")]
-[Authorize(Roles = "Admin")]
+[Route("api/categories")]
+[Authorize]
 public class CategoriesController : ControllerBase
 {
-    private readonly AppDbContext _dbContext;
+    private readonly ICategoryService _categoryService;
 
-    public CategoriesController(AppDbContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    public CategoriesController(ICategoryService categoryService)
+        => _categoryService = categoryService;
 
+    /// <summary>List all categories. Pass ?activeOnly=true to get only active ones.</summary>
     [HttpGet]
-    public async Task<ActionResult<List<CategoryResponse>>> GetCategories()
+    public async Task<IActionResult> List(
+        [FromQuery] bool activeOnly = false, CancellationToken ct = default)
     {
-        var categories = await _dbContext.Categories
-            .AsNoTracking()
-            .OrderBy(category => category.Name)
-            .Select(category => new CategoryResponse
-            {
-                Id = category.Id,
-                Name = category.Name,
-                Description = category.Description,
-                IsActive = category.IsActive,
-                CreatedAt = category.CreatedAt
-            })
-            .ToListAsync();
-
-        return Ok(categories);
+        var result = await _categoryService.GetAllAsync(activeOnly, ct);
+        return Ok(result);
     }
 
+    /// <summary>Get a single category by ID.</summary>
+    [HttpGet("{id:int}")]
+    public async Task<IActionResult> GetById(int id, CancellationToken ct)
+    {
+        var result = await _categoryService.GetByIdAsync(id, ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>Create a new category (Admin only). Invalidates the lookup cache.</summary>
     [HttpPost]
-    public async Task<ActionResult<CategoryResponse>> CreateCategory(
-        CreateCategoryRequest request)
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Create(
+        [FromBody] CreateCategoryRequest request, CancellationToken ct)
     {
-        var name = request.Name.Trim();
-
-        var alreadyExists = await _dbContext.Categories
-            .AnyAsync(category => category.Name.ToLower() == name.ToLower());
-
-        if (alreadyExists)
-        {
-            return Conflict(new
-            {
-                message = "A category with this name already exists."
-            });
-        }
-
-        var category = new Category
-        {
-            Name = name,
-            Description = request.Description?.Trim(),
-            IsActive = true,
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _dbContext.Categories.Add(category);
-        await _dbContext.SaveChangesAsync();
-
-        var response = new CategoryResponse
-        {
-            Id = category.Id,
-            Name = category.Name,
-            Description = category.Description,
-            IsActive = category.IsActive,
-            CreatedAt = category.CreatedAt
-        };
-
-        return CreatedAtAction(
-            nameof(GetCategories),
-            new { },
-            response);
+        var result = await _categoryService.CreateAsync(request, ct);
+        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
-    
+        /// <summary>
+    /// Public list of active categories (id, name, description only).
+    /// Used by the sign-up form before the user has logged in.
+    /// </summary>
+    [HttpGet("public")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ListPublic(CancellationToken ct)
+    {
+        var categories = await _categoryService.GetAllAsync(activeOnly: true, ct);
+
+        return Ok(categories.Select(c => new
+        {
+            c.Id,
+            c.Name,
+            c.Description
+        }));
+    }
+
+    /// <summary>Update a category (Admin only). Invalidates the lookup cache.</summary>
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<CategoryResponse>> UpdateCategory(
-        int id,
-        UpdateCategoryRequest request)
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Update(
+        int id, [FromBody] UpdateCategoryRequest request, CancellationToken ct)
     {
-        var category = await _dbContext.Categories.FindAsync(id);
-
-        if (category is null)
-        {
-            return NotFound(new
-            {
-                message = "Category not found."
-            });
-        }
-
-        var name = request.Name.Trim();
-
-        var duplicateExists = await _dbContext.Categories
-            .AnyAsync(c =>
-                c.Id != id &&
-                c.Name.ToLower() == name.ToLower());
-
-        if (duplicateExists)
-        {
-            return Conflict(new
-            {
-                message = "Another category already uses this name."
-            });
-        }
-
-        category.Name = name;
-        category.Description = request.Description?.Trim();
-
-        await _dbContext.SaveChangesAsync();
-
-        return Ok(new CategoryResponse
-        {
-            Id = category.Id,
-            Name = category.Name,
-            Description = category.Description,
-            IsActive = category.IsActive,
-            CreatedAt = category.CreatedAt
-        });
+        var result = await _categoryService.UpdateAsync(id, request, ct);
+        return Ok(result);
     }
 
+    /// <summary>Activate or deactivate a category (Admin only). Invalidates the lookup cache.</summary>
     [HttpPatch("{id:int}/status")]
-    public async Task<IActionResult> UpdateCategoryStatus(
-        int id,
-        UpdateCategoryStatusRequest request)
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> SetStatus(
+        int id, [FromBody] UpdateCategoryStatusRequest request, CancellationToken ct)
     {
-        var category = await _dbContext.Categories.FindAsync(id);
-
-        if (category is null)
-        {
-            return NotFound(new
-            {
-                message = "Category not found."
-            });
-        }
-
-        category.IsActive = request.IsActive;
-
-        await _dbContext.SaveChangesAsync();
-
-        return Ok(new
-        {
-            message = request.IsActive
-                ? "Category activated successfully."
-                : "Category deactivated successfully.",
-            categoryId = category.Id,
-            isActive = category.IsActive
-        });
+        var result = await _categoryService.SetStatusAsync(id, request.IsActive, ct);
+        return Ok(result);
     }
-
-
 }

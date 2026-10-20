@@ -1,11 +1,10 @@
+using AIHelpDesk.API.Services;
+using AIHelpDesk.Application.AgentApplications.DTOs;
+using AIHelpDesk.Application.AgentApplications.Services;
 using AIHelpDesk.Application.Auth.DTOs;
 using AIHelpDesk.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace AIHelpDesk.API.Controllers;
 
@@ -14,14 +13,17 @@ namespace AIHelpDesk.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IConfiguration _configuration;
+    private readonly ITokenService _tokenService;
+    private readonly IAgentApplicationService _applications;
 
     public AuthController(
         UserManager<ApplicationUser> userManager,
-        IConfiguration configuration)
+        ITokenService tokenService,
+        IAgentApplicationService applications)
     {
         _userManager = userManager;
-        _configuration = configuration;
+        _tokenService = tokenService;
+        _applications = applications;
     }
 
     [HttpPost("login")]
@@ -34,156 +36,95 @@ public class AuthController : ControllerBase
             return Unauthorized("Invalid email or password.");
         }
 
-        var passwordValid = await _userManager.CheckPasswordAsync(
-            user,
-            request.Password);
-
-        if (!passwordValid)
+        if (!await _userManager.CheckPasswordAsync(user, request.Password))
         {
             return Unauthorized("Invalid email or password.");
         }
 
         var roles = await _userManager.GetRolesAsync(user);
 
-        var claims = new List<Claim>
+        return Ok(_tokenService.CreateToken(user.Id, user.Email!, roles));
+    }
+
+    /// <summary>
+    /// Public self-registration. Always creates an Employee.
+    /// If ApplyAsAgent is true, a Pending agent application is created too;
+    /// an Admin must approve it before the user becomes an Agent.
+    /// </summary>
+    [HttpPost("register")]
+    public async Task<IActionResult> Register(
+        RegisterRequest request, CancellationToken ct)
+    {
+        var email = request.Email.Trim();
+
+        // Validate the requested categories BEFORE creating the account,
+        // so a bad category list never leaves a half-created user behind.
+        IReadOnlyList<int> categoryIds = [];
+        if (request.ApplyAsAgent)
         {
-            new Claim(
-                JwtRegisteredClaimNames.Sub,
-                user.Id),
+            categoryIds = await _applications.ValidateCategoriesAsync(request.CategoryIds, ct);
+        }
 
-            new Claim(
-                JwtRegisteredClaimNames.Email,
-                user.Email!),
+        if (await _userManager.FindByEmailAsync(email) is not null)
+        {
+            return Conflict("An account with this email already exists.");
+        }
 
-            new Claim(
-                ClaimTypes.NameIdentifier,
-                user.Id)
+        var user = new ApplicationUser
+        {
+            UserName = email,
+            Email = email,
+            FullName = request.FullName?.Trim() ?? string.Empty,
+            IsActive = true,
+            EmailConfirmed = true
         };
 
-        foreach (var role in roles)
+        var result = await _userManager.CreateAsync(user, request.Password);
+
+        if (!result.Succeeded)
         {
-            claims.Add(
-                new Claim(ClaimTypes.Role, role));
+            return BadRequest(new { Errors = result.Errors.Select(e => e.Description) });
         }
 
-        var key = _configuration["Jwt:Key"]
-            ?? throw new InvalidOperationException(
-                "JWT key is not configured.");
+        var roleResult = await _userManager.AddToRoleAsync(user, "Employee");
 
-        var issuer = _configuration["Jwt:Issuer"]
-            ?? throw new InvalidOperationException(
-                "JWT issuer is not configured.");
-
-        var audience = _configuration["Jwt:Audience"]
-            ?? throw new InvalidOperationException(
-                "JWT audience is not configured.");
-
-        var expiresAt = DateTime.UtcNow.AddMinutes(30);
-
-        var signingKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(key));
-
-        var credentials = new SigningCredentials(
-            signingKey,
-            SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(
-            issuer: issuer,
-            audience: audience,
-            claims: claims,
-            expires: expiresAt,
-            signingCredentials: credentials);
-
-        var accessToken = new JwtSecurityTokenHandler()
-            .WriteToken(token);
-
-        return Ok(new LoginResponse
+        if (!roleResult.Succeeded)
         {
-            AccessToken = accessToken,
-            ExpiresAt = expiresAt
-        });
-        
-    }
-        [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterRequest request)
+            await _userManager.DeleteAsync(user);
+            return StatusCode(500, "Unable to assign the Employee role.");
+        }
+
+        AgentApplicationResponse? application = null;
+
+        if (request.ApplyAsAgent)
         {
-            var existingUser = await _userManager.FindByEmailAsync(request.Email);
-
-            if (existingUser is not null)
+            try
             {
-                return Conflict("An account with this email already exists.");
+                application = await _applications.CreateAsync(
+                    user.Id,
+                    new CreateAgentApplicationRequest
+                    {
+                        CategoryIds = categoryIds.ToList(),
+                        Message = request.AgentMessage
+                    },
+                    ct);
             }
-
-            var user = new ApplicationUser
+            catch
             {
-                UserName = request.Email,
-                Email = request.Email,
-                EmailConfirmed = true
-            };
-
-            var result = await _userManager.CreateAsync(user, request.Password);
-
-            if (!result.Succeeded)
-            {
-                return BadRequest(new
-                {
-                    Errors = result.Errors.Select(error => error.Description)
-                });
-            }
-
-            var roleResult = await _userManager.AddToRoleAsync(user, request.Role);
-
-            if (!roleResult.Succeeded)
-            {
+                // Don't leave an account behind if the application could not be saved.
                 await _userManager.DeleteAsync(user);
-
-                return StatusCode(500, "Unable to assign the requested role.");
+                throw;
             }
-
-            var roles = await _userManager.GetRolesAsync(user);
-
-            var claims = new List<Claim>
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email!),
-                new Claim(ClaimTypes.NameIdentifier, user.Id)
-            };
-
-            foreach (var role in roles)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, role));
-            }
-
-            var key = _configuration["Jwt:Key"]
-                ?? throw new InvalidOperationException("JWT key is not configured.");
-
-            var issuer = _configuration["Jwt:Issuer"]
-                ?? throw new InvalidOperationException("JWT issuer is not configured.");
-
-            var audience = _configuration["Jwt:Audience"]
-                ?? throw new InvalidOperationException("JWT audience is not configured.");
-
-            var expiresAt = DateTime.UtcNow.AddMinutes(30);
-
-            var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
-
-            var credentials = new SigningCredentials(
-                signingKey,
-                SecurityAlgorithms.HmacSha256);
-
-            var token = new JwtSecurityToken(
-                issuer: issuer,
-                audience: audience,
-                claims: claims,
-                expires: expiresAt,
-                signingCredentials: credentials);
-
-            var accessToken = new JwtSecurityTokenHandler().WriteToken(token);
-
-            return Ok(new LoginResponse
-            {
-                AccessToken = accessToken,
-                ExpiresAt = expiresAt
-            });
         }
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var token = _tokenService.CreateToken(user.Id, user.Email!, roles);
+
+        return Ok(new RegisterResponse
+        {
+            AccessToken = token.AccessToken,
+            ExpiresAt = token.ExpiresAt,
+            AgentApplication = application
+        });
+    }
 }

@@ -52,11 +52,15 @@ public static class IdentitySeeder
             return;
         }
 
+        var fullName = configuration["AdminSeed:FullName"] ?? "System Administrator";
+
         var admin = new ApplicationUser
         {
             UserName = email,
             Email = email,
-            EmailConfirmed = true
+            EmailConfirmed = true,
+            FullName = fullName,
+            IsActive = true
         };
 
         var result = await userManager.CreateAsync(
