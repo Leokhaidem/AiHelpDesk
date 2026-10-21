@@ -20,7 +20,6 @@
 12. [Testing](#12-testing)
 13. [Useful Commands](#13-useful-commands)
 14. [Deployment & Roadmap](#14-deployment--roadmap)
-15. [Contributors](#15-contributors)
 
 ---
 
@@ -709,6 +708,3 @@ npm test             # Vitest (single run)
 - [ ] Rate limiting, refresh tokens, cookie-based sessions
 - [ ] Mongo compound index `{ticketId: 1, timestamp: 1}` + log aggregation
 
-## 15. Contributors
-
-Developed as a final-year project — **AI Help Desk & Ticket Management System**.
